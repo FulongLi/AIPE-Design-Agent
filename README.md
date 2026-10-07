@@ -1,6 +1,13 @@
-# PEA - Power Electronics AI Agent
+# AIPE Design Agent
 
 An AI assistant for power electronics design: topology selection, parameter calculation, efficiency estimation, and component guidance.
+
+AIPE means **AI for Power Engineering**. The existing `pea` package and interfaces
+remain available. The new [Core/Registry orchestration path](docs/ecosystem-orchestration.md)
+adds explicit suitability and fidelity assessment, open-source preference among
+suitable tools, and evidence-linked state proposals. Its minimal offline workflow
+needs Python and JSON Schema validation; no commercial solver or API key is required.
+See the [capability manifest](aipe.yaml) and [review boundary](pea/review/README.md).
 
 ## Features
 

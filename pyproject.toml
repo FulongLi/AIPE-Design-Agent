@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pea"
 version = "0.1.0"
-description = "Power Electronics AI Agent - Design assistant for DC-DC converters"
+description = "AIPE Design Agent - Power engineering design and orchestration"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -37,6 +37,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+orchestration = ["jsonschema[format]>=4.25,<5"]
 dev = ["pytest>=7.0", "ruff>=0.1.0"]
 desktop = ["pywebview>=5.0"]
 optimize = ["pymoo>=0.6.1", "numpy>=1.24", "pandas>=2.0"]

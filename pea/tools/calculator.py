@@ -499,7 +499,7 @@ def cascade_design(
         if v_in > v_out:
             stage1 = buck_converter_design(v_in=v_in, v_out=v_mid, i_out=i_mid, f_sw_khz=f_sw_khz)
             stage2 = {"topology": "pass-through", "notes": "Single-stage Buck sufficient"}
-            pattern = "Single-stage Buck (cascade not needed)"
+            pattern = "Single-stage Buck sufficient (cascade not needed)"
         else:
             stage1 = {"topology": "pass-through", "notes": "Single-stage Boost sufficient"}
             stage2 = boost_converter_design(v_in=v_mid, v_out=v_out, i_out=i_out, f_sw_khz=f_sw_khz)

@@ -1,0 +1,2 @@
+# Minimal offline orchestration path; no LLM, commercial solver or API key needed.
+jsonschema[format]==4.25.1
