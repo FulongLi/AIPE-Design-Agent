@@ -1,0 +1,10 @@
+[
+  {
+    "capability_id": "aipe.design-agent",
+    "tool_id": "python",
+    "capability": "operating-point-analysis",
+    "suitability": 1.0,
+    "fidelities": ["analytical"],
+    "rationale": "The built-in adapter computes P_out/V_out and V_out/V_in from positive SI requirements. It is suitable only for nominal DC algebra, not switching waveforms, magnetic sizing, losses or measurements."
+  }
+]
