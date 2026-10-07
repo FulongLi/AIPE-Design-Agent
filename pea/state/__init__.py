@@ -17,35 +17,21 @@ def load_json(path):
 
 
 def validate_state(state, core):
-    """Use a local Core checkout; never download schemas or execute its code."""
-    from jsonschema import Draft202012Validator, FormatChecker
-    from referencing import Registry, Resource
-    from referencing.exceptions import NoSuchResource
-    def offline(uri):
-        raise NoSuchResource(ref=uri)
-    schemas = [load_json(path) for path in sorted((Path(core) / 'schemas').glob('*.schema.json'))]
-    if not schemas:
-        raise ValueError('Core schema directory is missing or empty')
-    resources = Registry(retrieve=offline).with_resources((s['$id'], Resource.from_contents(s)) for s in schemas)
-    schema = next(s for s in schemas if s['$id'].endswith('/engineering-state.schema.json'))
-    validator = Draft202012Validator(schema, registry=resources, format_checker=FormatChecker())
-    errors = sorted(validator.iter_errors(state), key=lambda e: e.json_path)
+    """Run the canonical validator from an explicitly trusted local Core checkout.
+
+    Core owns both schemas and semantic checks. Reusing its checker avoids a
+    permissive, drifting partial implementation in every consumer. This loads
+    local Python code: callers must review/pin the checkout supplied as `core`.
+    """
+    import importlib.util
+    core = Path(core).resolve()
+    script = core / 'scripts/validate.py'
+    if not script.is_file() or not (core / 'schemas/engineering-state.schema.json').is_file():
+        raise ValueError('trusted Core checkout must contain scripts/validate.py and schemas')
+    spec = importlib.util.spec_from_file_location('_aipe_core_contract_validator', script)
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+    errors = checker.validate_state(state, core / 'schemas')
     if errors:
-        raise ValueError('; '.join(f'{e.json_path}: {e.message}' for e in errors))
-    # Avoid silently consuming dangling or rejected evidence in an otherwise valid shape.
-    evidence = {e['id']: e for e in state['evidence']}
-    if len(evidence) != len(state['evidence']):
-        raise ValueError('duplicate evidence IDs')
-    def walk(value):
-        if isinstance(value, dict):
-            for reference in value.get('evidence_refs', []):
-                if reference not in evidence or evidence[reference]['review_status'] == 'rejected':
-                    raise ValueError(f'unknown or rejected evidence: {reference}')
-            for key, item in value.items():
-                if key != 'extensions':
-                    walk(item)
-        elif isinstance(value, list):
-            for item in value:
-                walk(item)
-    walk(state)
+        raise ValueError('; '.join(errors))
     return state

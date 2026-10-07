@@ -143,3 +143,20 @@ def test_complete_state_contract_against_local_core_when_available(state):
         pytest.skip('Cross-repository integration requires the versioned Core checkout; standalone adapter tests run above.')
     validate_state(state, core)
     validate_state(analyse_operating_point(state, '2026-10-07T00:00:00Z'), core)
+
+
+@pytest.mark.parametrize('mutate', [
+    lambda s: s['evidence'][0]['provenance'].update(inputs=['evidence.missing']),
+    lambda s: s['evidence'][0]['provenance'].update(inputs=['evidence.design-brief']),
+    lambda s: s['validation'].update(status='measured'),
+    lambda s: s['project'].update(id=s['id']),
+    lambda s: s['simulation'].update(status='completed'),
+    lambda s: s['requirements'].update(evidence_refs=[]),
+])
+def test_core_semantic_rejections_are_not_weakened_by_consumer(state, mutate):
+    core = ROOT.parent / 'AIPE-Core'
+    if not (core / 'scripts/validate.py').is_file():
+        pytest.skip('Semantic parity requires the trusted Core dependency checkout.')
+    mutate(state)
+    with pytest.raises(ValueError):
+        validate_state(state, core)

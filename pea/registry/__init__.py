@@ -10,7 +10,10 @@ def load_registry(path, schema_path):
         raise ValueError('unsupported Registry envelope')
     if not isinstance(payload['capabilities'], list) or not payload['capabilities']:
         raise ValueError('Registry capabilities must be a nonempty list')
-    validator = Draft202012Validator(load_json(Path(schema_path)), format_checker=FormatChecker())
+    checker = FormatChecker()
+    if 'uri' not in checker.checkers:
+        raise ValueError('URI format checker unavailable; install requirements-orchestration.txt')
+    validator = Draft202012Validator(load_json(Path(schema_path)), format_checker=checker)
     ids = set()
     for manifest in payload['capabilities']:
         failures = list(validator.iter_errors(manifest))

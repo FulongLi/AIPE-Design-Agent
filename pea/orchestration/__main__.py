@@ -12,7 +12,7 @@ from pea.state import load_json, validate_state
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--state', required=True, type=Path)
-    parser.add_argument('--core', required=True, type=Path, help='local AIPE-Core checkout for offline schemas')
+    parser.add_argument('--core', required=True, type=Path, help='trusted local AIPE-Core checkout; executes its canonical offline validator')
     parser.add_argument('--registry', required=True, type=Path)
     parser.add_argument('--registry-schema', required=True, type=Path)
     parser.add_argument('--assessments', required=True, type=Path, help='reviewed suitability and fidelity assessments')

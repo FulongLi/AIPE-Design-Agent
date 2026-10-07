@@ -68,11 +68,15 @@ their limitations. No suitable candidate produces an audit plan and exit code 2.
 
 ## State and provenance boundaries
 
-`pea.state` resolves logical Core schemas from disk, with remote resolution
-disabled. `pea.registry` validates the complete index against the supplied Registry
+`pea.state` runs the canonical `scripts/validate.py` module from the explicitly
+supplied local Core checkout. This executes that checkout's Python validator, so
+review and pin the Core source just like a library dependency. Core resolves
+logical schemas from disk with remote resolution disabled and checks evidence
+references/cycles, entity uniqueness, simulation records and validation claims.
+`pea.registry` validates the complete index against the supplied Registry
 manifest schema and rejects duplicate IDs/unknown dependencies. Keep those checkouts
 pinned/reviewed together; validators do not establish a remote release exists.
-Full Core semantic validation remains authoritative:
+The same authoritative Core semantic checks can be run independently:
 
 ```sh
 python ../AIPE-Core/scripts/validate.py out/state.json
