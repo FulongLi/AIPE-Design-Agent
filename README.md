@@ -1,256 +1,54 @@
-# AIPE Design Agent
+# AIPE — Electrical Design
 
-An AI assistant for power electronics design: topology selection, parameter calculation, efficiency estimation, and component guidance.
-
-AIPE means **AI for Power Engineering**. The existing `pea` package and interfaces
-remain available. The new [Core/Registry orchestration path](docs/ecosystem-orchestration.md)
-adds explicit suitability and fidelity assessment, open-source preference among
-suitable tools, and evidence-linked state proposals. Its minimal offline workflow
-needs Python and JSON Schema validation; no commercial solver or API key is required.
-See the [capability manifest](aipe.yaml) and [review boundary](pea/review/README.md).
+`aipe_electrical` is the analytical electrical-design library of the AIPE (AI for Power Engineering) ecosystem. It provides the exact lossless single-phase-shift (SPS) model of the dual active bridge that AIPE-Workflows uses for the 10 kW DAB case, continuous-conduction sizing formulas for basic DC-DC stages and a first-order buck loss estimate, all with explicit SI units and sign conventions. The former experimental "PEA" application (LangChain agent, RAG knowledge base, Streamlit, static and desktop UIs, component and magnetics tables, orchestration prototype) was retired in v0.2.0 and is archived at the Git tag `legacy-pea-v0.1`; its thermal module now lives in AIPE-Thermal-Design (`aipe_thermal`).
 
 ## Features
 
-- **Topology recommendation**: Suggests the best converter topology based on your specs (including DAB, cascade patterns)
-- **11 converter calculators**: Buck, Boost, Buck-Boost, SEPIC, Cuk, Forward, Flyback, LLC Resonant, **DAB** (bidirectional), plus **Cascade** (multi-stage) auto-design
-- **Magnetics design**: Inductor and transformer sizing with core selection (EE, PQ, RM, ETD, EFD, EP, toroid, EI), ferrite material library (N87, N97, 3C90, 3C95, 3F3, PC40, PC95), Steinmetz core loss
-- **Component library**: Reference MOSFETs (Si, GaN, SiC), diodes (Schottky, SiC, Ultrafast), and capacitors with auto-recommendation from operating point
-- **Efficiency estimation**: First-order loss breakdown (conduction + switching) with component parameters
-- **Pareto optimizer**: Generates DC-DC design candidates across topology, switching frequency, semiconductors, magnetics, efficiency, volume, and estimated BOM cost
-- **STEP envelope export**: Optional CadQuery-based 3D envelope model for the recommended optimized design (PCB, magnetics, semiconductors, capacitors, heatsink blocks)
-- **RAG knowledge base**: Answers questions using curated power electronics knowledge — topologies, SST (solid-state transformers), cascade architectures, magnetics, and component selection (Erickson & Maksimovic)
-- **Multi-turn AI chat**: Conversational agent that remembers context across messages
-- **CLI & Web UI**: Terminal (`pea`) or Streamlit (`app.py`)
-- **Static UI (`index.html`)**: English UI. **Topology Advisor** (auto recommendation) and **Efficiency estimate** are **pinned at the top** of the sidebar (always visible). Below that, tabs list **DC-DC / DC-AC / AC-DC / AC-AC**. Design calculators, SPICE/components/magnetics, and a **Cursor-style PEA Agent** (model picker, optional OpenAI in ⚙; rules fallback). Browse-only rows have no built-in calculator yet.
-- **Desktop app**: Native window (no separate browser tab) via **pywebview**—double-click `run_pea_desktop.bat` (Windows) or run `python -m pea.desktop` / `pea-desktop` after `pip install -e ".[desktop]"`.
+- Lossless SPS DAB analysis: power, maximum power, phase shift or total series inductance for a target power, exact piecewise-linear series current (RMS, peak, value at any instant), switching-instant currents, power-flow direction and sampled waveforms.
+- Explicit semantics: turns ratio `N_p/N_s` versus `N_s/N_p`, total primary-referred series inductance composed from external and leakage parts, phase shift in radians with degree helpers, `|phi| <= 90 deg` enforced.
+- ZVS reported only as a necessary current-direction condition carrying an evidence label, never as "ZVS confirmed".
+- CCM sizing for buck, boost, inverting buck-boost, SEPIC and Cuk; first-order hard-switched buck losses; exact waveform metrics.
+- Generic Pareto helpers and an SPS design-space sweep (lossless screening; no loss, magnetic or thermal model).
+- JSON in/out helpers and the `aipe-electrical` command line; standard library only.
 
-## Quick Start
-
-### 1. Install
-
-```bash
-cd PEA
-pip install -e .
-```
-
-Optional extras:
-
-```bash
-# Multi-objective optimizer backend (pymoo NSGA-II)
-pip install -e ".[optimize]"
-
-# STEP export for optimized candidate envelopes
-pip install -e ".[cad]"
-```
-
-Or install dependencies only:
-
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Run design tools (no API key)
-
-```bash
-# List available tools
-pea tools
-
-# Topology recommendation
-pea tool recommend --v-in 12 --v-out 5 --i-out 2
-
-# Buck converter design
-pea tool buck --v-in 12 --v-out 5 --i-out 2 --f-sw 100
-
-# Boost converter design
-pea tool boost --v-in 5 --v-out 12 --i-out 1
-
-# SEPIC converter design
-pea tool sepic --v-in 12 --v-out 5 --i-out 2
-
-# LLC resonant converter
-pea tool llc --v-in 400 --v-out 12 --i-out 20
-
-# DAB (Dual Active Bridge) bidirectional
-pea tool dab --v1 400 --v2 48 --p-rated 1000
-
-# Cascade (multi-stage) design
-pea tool cascade --v-in 230 --v-out 12 --i-out 20
-
-# Inductor magnetics design
-pea tool inductor --inductance 100 --i-peak 5 --i-rms 3 --core-shape EE --material N87
-
-# Transformer magnetics design
-pea tool transformer --v-pri 400 --v-sec 12 --power 500 --core-shape ETD --material N87
-
-# Efficiency estimate
-pea tool efficiency --v-in 12 --v-out 5 --i-out 2 --rds-on 50 --dcr 30
-
-# Component recommendation
-pea tool components --v-in 12 --v-out 5 --i-out 2
-
-# Pareto optimization
-pea optimize --v-in-min 36 --v-in 48 --v-in-max 60 --v-out 12 --i-out 20 --summary
-```
-
-The Streamlit app also includes a **Pareto Optimizer** workspace. It accepts DC-DC
-specifications, generates feasible Buck / Boost / Buck-Boost / SEPIC / Cuk / LLC
-candidates, shows the Pareto front, and can export a STEP envelope when the
-`[cad]` extra is installed.
-
-### 3. AI chat (requires OpenAI API key)
-
-```bash
-# Set your API key
-export OPENAI_API_KEY=sk-your-key-here
-
-# Chat with PEA
-pea chat "Design a 12V to 5V 2A Buck converter"
-```
-
-### 4. Web interface (Streamlit — full Python stack)
-
-```bash
-streamlit run app.py
-```
-
-Open http://localhost:8501. Use the sidebar for direct calculations, or enter your API key for AI chat.
-
-### 5. Static page or desktop window (`index.html`)
-
-Open `index.html` in a browser, or run the desktop shell (loads the same UI):
-
-```bash
-# Optional: install webview extra
-pip install -e ".[desktop]"
-
-# From repo root
-python -m pea.desktop
-# or, after editable install:
-pea-desktop
-```
-
-**Windows:** double-click `run_pea_desktop.bat` (installs `pywebview` if missing, sets `PYTHONPATH` to the repo root).
-
-The desktop app serves the repo over **http://127.0.0.1** so the **SPICE** tab can load `data/spice_models_json/ui_catalog.json` and open **LTspice** with your netlist + selected vendor model (set `LTSPICE_EXE` if auto-detect fails).
-
-Requires **Edge WebView2** on Windows (usually preinstalled). To build a single-file `.exe`, see the PyInstaller notes in `pea/desktop.py` (bundle the `data/` folder for the model library).
-
-### 6. Run tests
+## Installation
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/ -v
+python -m pytest
 ```
 
-For a **manual** check of the LangChain agent (requires `OPENAI_API_KEY`):
+## Usage
 
 ```bash
-python scripts/agent_smoke_test.py "Your design question here"
+aipe-electrical dab-sps design --v1 800 --v2 400 --power 10000 --f-sw 100e3 --phi-deg 22.5
+aipe-electrical dab-sps analyse --input examples/dab-10kw-sps.json
+aipe-electrical dcdc buck --v-in 12 --v-out 5 --i-out 2 --f-sw 100e3
 ```
 
-## Project structure
+```python
+import math
+from aipe_electrical.converters import dab_sps
 
-Two **separate** user-facing surfaces share the **same Python math** where wired:
-
-| Surface | Role |
-|--------|------|
-| **`app.py`** + **`pea` CLI** | Streamlit or terminal; call `execute_tool` / `PEAAgent`. |
-| **`index.html`** + **`pea.desktop`** | Static UI in the browser or pywebview; calculators in-page (rules/JS); optional OpenAI in the agent strip only. |
-
-When you change equations, update **`pea/tools/calculator.py`** first, then align Streamlit, CLI, LangChain tools, and any mirrored logic in `index.html` if applicable.
-
-```
-PEA/
-├── pea/                      # Installable Python package (pip install -e .)
-│   ├── agent/                # PEAAgent: LLM + tools + optional RAG
-│   ├── knowledge/            # Curated RAG chunks + KnowledgeRetriever (Chroma / fallback)
-│   ├── tools/
-│   │   ├── calculator.py     # Source of truth for design equations + execute_tool
-│   │   ├── langchain_tools.py
-│   │   └── magnetics_data.py # Core shapes & ferrite material library (Steinmetz params)
-│   ├── components/
-│   │   ├── __init__.py
-│   │   └── schema.py         # Component schema (MOSFET, Diode, Capacitor) + search + auto-recommend
-│   ├── optimization.py       # Pareto candidate generation + optional pymoo NSGA-II backend
-│   ├── cad.py                # Optional CadQuery STEP envelope export
-│   ├── cli.py                # pea console entry point
-│   └── desktop.py            # Native window → index.html
-├── tests/                    # pytest (calculators, magnetics, components, execute_tool)
-├── data/
-│   ├── spice_models_json/    # Vendor SPICE as JSON + ui_catalog.json (PEA UI + LTspice workflow)
-│   └── raw/                  # Optional PDF extract (not read at runtime; see data/README.md)
-├── scripts/
-│   ├── extract_pdf.py        # PDF → text for curating knowledge (needs pypdf)
-│   └── agent_smoke_test.py   # Manual OpenAI smoke test (not pytest)
-├── .streamlit/
-│   └── config.toml           # e.g. disable first-run email prompt (tracked)
-├── app.py                    # Streamlit
-├── index.html                # Static UI
-├── run_pea_desktop.bat
-├── pyproject.toml
-├── requirements.txt
-├── CONTRIBUTING.md
-├── TESTING.md
-└── README.md
+op = dab_sps.SpsOperatingPoint(v1=800, v2=400, turns_ratio_np_ns=2, f_sw=100e3,
+                               l_series_total=35e-6, phi_rad=math.radians(22.5))
+dab_sps.power(op)        # 10000.0 W (port 1 -> port 2)
+dab_sps.current_rms(op)  # 13.6775 A
+dab_sps.analyse(op)      # JSON-ready report with SI units and ZVS current-direction conditions
 ```
 
-## Converter mathematics (`pea.converters`)
+## Project Information
 
-`pea/converters/dab_sps.py` holds the lossless single-phase-shift dual-active-bridge analysis used by the DC-DC calculator and by
-AIPE-Workflows: power and maximum power, phase shift or inductance for a target power, piecewise-linear series current (breakpoints,
-RMS, peak, value at any instant with a rising-edge or centred origin), per-switch turn-off currents, the ZVS current-direction
-limits and a sampled waveform for plotting. `dab_design` in `pea/tools/calculator.py` delegates to it, so the calculator, the
-UI and the workflow share one implementation (`tests/test_dab_sps.py`). The analysis is lossless and idealised: no dead time,
-magnetising current, device capacitance or conduction loss; it is the analytical reference that executed circuit simulations are
-compared against, not a validation of them.
+- Version: 0.2.0 (from `pyproject.toml`)
+- Status: Alpha
+- Developer: Fulong Li
+- Organisation: Spirit Connect / AIPE Labs
+- License: MIT (`LICENSE`)
 
-## Thermal design (`pea.thermal`)
+## Documentation
 
-Pure-Python thermal evaluation of devices and their cooling (no LangChain/Streamlit):
-
-- `pea/thermal/network.py` -- junction -> case -> TIM -> shared heat sink -> ambient for several devices on one sink; Foster/Cauer transient impedances (standard library only).
-- `pea/thermal/electrothermal.py` -- loss(Tj) <-> Tj fixed-point loop with pluggable loss callables; datasheet defaults (two-point `R_DS(on)`, `E_off` linear in Tj).
-- `pea/thermal/cooling.py` -- natural convection, forced air and liquid cold plate compared on max Tj, resistance, volume, mass, auxiliary power; acoustic/reliability/isolation/leakage/condensation listed as review items.
-- `pea/thermal/heatsink_optimisation.py` -- Stage A analytical Pareto screening of plate-fin geometries (material, fins, base, flow) with candidates flagged for FEM verification.
-- `pea/thermal/dab_case.py` -- the AIPE 10 kW DAB case (sourced inputs and explicit assumptions).
-
-The air-side models come from the corrected sibling checkout `../HeatSinkOptimisation/heatsink_model.py`
-(CC BY 4.0). Set `HEATSINK_OPT_DIR` if it lives elsewhere; a clear error is raised when it is absent.
-Install `pip install -e ".[thermal]"` (numpy, scipy) for `cooling`, `heatsink_optimisation` and the DAB case.
-
-```bash
-python -m pea.thermal dab-case --quick --output runs/thermal        # case study, JSON in runs/thermal/
-python -m pea.thermal cooling-compare --input spec.json             # see python -m pea.thermal --help for layouts
-python -m pea.thermal heatsink-pareto --input task.json --output front.json
-python -m pea.thermal network --input network.json
-python -m pea.thermal electrothermal --input et.json
-```
-
-All results are analytical correlation estimates with stated validity ranges; none is a CFD, FEM or measured value.
-
-## Supported Topologies
-
-| Topology | Type | Use when |
-|----------|------|----------|
-| Buck | Non-isolated | V_out < V_in (step-down) |
-| Boost | Non-isolated | V_out > V_in (step-up) |
-| Buck-Boost | Non-isolated | Inverting or wide input range |
-| SEPIC | Non-isolated | Non-inverting buck-boost, common ground |
-| Cuk | Non-isolated | Inverting, continuous input & output current |
-| Forward | Isolated | 50-300 W, single-ended |
-| Flyback | Isolated | Low-medium power, galvanic isolation |
-| LLC Resonant | Isolated | High efficiency, >200 W, ZVS operation |
-| **DAB** | Isolated, bidirectional | EV charging, energy storage, V2G, SST |
-| **Cascade** | Multi-stage | Extreme ratios, PFC+LLC, Buck+Buck |
-
-## Environment Variables
-
-- `OPENAI_API_KEY`: Required for AI chat (get from [OpenAI](https://platform.openai.com))
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests, code layout, PR expectations, and **keeping README + CONTRIBUTING updated** when user-facing behavior changes.
-
-## License
-
-MIT
+- [docs/models.md](docs/models.md) — SPS derivation, sign conventions, ZVS condition, limits, CCM and loss formulas
+- [docs/migration.md](docs/migration.md) — `pea.*` to `aipe_electrical` mapping, removed modules, archival tag
+- [CHANGELOG.md](CHANGELOG.md) — release notes and the 0.2.0 version justification
+- [CONTRIBUTING.md](CONTRIBUTING.md) — development setup and pull-request expectations
+- [aipe.yaml](aipe.yaml) — AIPE capability manifest (`aipe.electrical-design`)
