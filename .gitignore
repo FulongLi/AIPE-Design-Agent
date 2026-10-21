@@ -3,22 +3,14 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
 wheels/
 *.egg-info/
-.installed.cfg
 *.egg
+.eggs/
+.pytest_cache/
+.ruff_cache/
 
 # Virtual environments
 .venv/
@@ -32,13 +24,6 @@ env/
 *.swp
 *.swo
 
-# Environment
-.env
-.env.local
-
-# PEA data
-.pea/
-
-# Streamlit — ignore local secrets; project defaults may live in repo
-.streamlit/*
-!.streamlit/config.toml
+# Local run outputs
+runs/
+out/
