@@ -1,6 +1,6 @@
 # Contributing to PEA
 
-**Last updated:** 2026-05-22
+**Last updated:** 2026-10-21
 
 Thank you for helping improve PEA (Power Electronics AI Agent). This document is for anyone who will maintain or extend the project.
 
@@ -11,6 +11,7 @@ PEA assists with power electronics design: topology recommendation, DC-DC parame
 - **Core logic** lives in Python under `pea/`; the **single source of truth** for design equations is `pea/tools/calculator.py`.
 - **Pareto optimization** lives in `pea/optimization.py`: it generates DC-DC candidates, ranks efficiency/volume/cost trade-offs, uses optional `pymoo` NSGA-II when installed, and otherwise falls back to a deterministic screening backend.
 - **3D envelope export** lives in `pea/cad.py` and requires the optional `[cad]` extra (`cadquery`). The first version exports mechanical envelope STEP models, not detailed PCB layout.
+- **Thermal design** lives in `pea/thermal/` (pure Python, no LangChain/Streamlit imports): `network.py` (junction -> case -> TIM -> shared heat sink -> ambient for several devices, Foster/Cauer `Zth`), `electrothermal.py` (loss(Tj) <-> Tj iteration with pluggable loss callables and datasheet defaults), `cooling.py` (natural convection / forced air / liquid cold plate comparison with qualitative review items), `heatsink_optimisation.py` (Stage A Pareto screening with FEM-verification flags), `dab_case.py` (the AIPE 10 kW DAB case) and `__main__.py` (`python -m pea.thermal`). The air-side correlations are imported from the **sibling checkout** `../HeatSinkOptimisation/heatsink_model.py` (CC BY 4.0; override the location with `HEATSINK_OPT_DIR`); `network`/`electrothermal` need only the standard library, the rest needs `pip install -e ".[thermal]"` (numpy, scipy). Results are analytical correlations, never CFD/FEM claims.
 - **`app.py`** is the Streamlit UI; it calls the same calculator tools as the CLI.
 - **`index.html`** is a **standalone** UI (browser or **`pea/desktop.py`**). **User-visible copy is English.** The sidebar **pins** **Topology Advisor** (auto topology recommendation) and **Efficiency estimate** above the DC-DC / DC-AC / AC-DC / AC-AC tabs so they are always visible. Also: SPICE / components / magnetics and a **Cursor-style agent** (model picker, optional OpenAI in ⚙, rules fallback). It does **not** call Python for calculators. **DAB**, magnetics (inductor/transformer), and efficiency calculators are now implemented in both `index.html` (JS) and `calculator.py` (Python)—keep both sides aligned when you extend features.
 
@@ -101,6 +102,7 @@ ruff format .
 | Magnetics data (core shapes, materials) | `pea/tools/magnetics_data.py` |
 | Component schema & search | `pea/components/schema.py` |
 | Pareto optimization | `pea/optimization.py` |
+| Thermal networks, electrothermal loop, cooling comparison, heat-sink Stage A screening, DAB thermal case | `pea/thermal/` (+ sibling `HeatSinkOptimisation/heatsink_model.py`); tests `tests/test_thermal_*.py` |
 | STEP envelope export | `pea/cad.py` |
 | LangChain tools exposed to the LLM | `pea/tools/langchain_tools.py` |
 | Agent behavior, prompts, chat loop | `pea/agent/runner.py` |
