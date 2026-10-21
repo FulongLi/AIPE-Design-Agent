@@ -194,6 +194,40 @@ PEA/
 └── README.md
 ```
 
+## Converter mathematics (`pea.converters`)
+
+`pea/converters/dab_sps.py` holds the lossless single-phase-shift dual-active-bridge analysis used by the DC-DC calculator and by
+AIPE-Workflows: power and maximum power, phase shift or inductance for a target power, piecewise-linear series current (breakpoints,
+RMS, peak, value at any instant with a rising-edge or centred origin), per-switch turn-off currents, the ZVS current-direction
+limits and a sampled waveform for plotting. `dab_design` in `pea/tools/calculator.py` delegates to it, so the calculator, the
+UI and the workflow share one implementation (`tests/test_dab_sps.py`). The analysis is lossless and idealised: no dead time,
+magnetising current, device capacitance or conduction loss; it is the analytical reference that executed circuit simulations are
+compared against, not a validation of them.
+
+## Thermal design (`pea.thermal`)
+
+Pure-Python thermal evaluation of devices and their cooling (no LangChain/Streamlit):
+
+- `pea/thermal/network.py` -- junction -> case -> TIM -> shared heat sink -> ambient for several devices on one sink; Foster/Cauer transient impedances (standard library only).
+- `pea/thermal/electrothermal.py` -- loss(Tj) <-> Tj fixed-point loop with pluggable loss callables; datasheet defaults (two-point `R_DS(on)`, `E_off` linear in Tj).
+- `pea/thermal/cooling.py` -- natural convection, forced air and liquid cold plate compared on max Tj, resistance, volume, mass, auxiliary power; acoustic/reliability/isolation/leakage/condensation listed as review items.
+- `pea/thermal/heatsink_optimisation.py` -- Stage A analytical Pareto screening of plate-fin geometries (material, fins, base, flow) with candidates flagged for FEM verification.
+- `pea/thermal/dab_case.py` -- the AIPE 10 kW DAB case (sourced inputs and explicit assumptions).
+
+The air-side models come from the corrected sibling checkout `../HeatSinkOptimisation/heatsink_model.py`
+(CC BY 4.0). Set `HEATSINK_OPT_DIR` if it lives elsewhere; a clear error is raised when it is absent.
+Install `pip install -e ".[thermal]"` (numpy, scipy) for `cooling`, `heatsink_optimisation` and the DAB case.
+
+```bash
+python -m pea.thermal dab-case --quick --output runs/thermal        # case study, JSON in runs/thermal/
+python -m pea.thermal cooling-compare --input spec.json             # see python -m pea.thermal --help for layouts
+python -m pea.thermal heatsink-pareto --input task.json --output front.json
+python -m pea.thermal network --input network.json
+python -m pea.thermal electrothermal --input et.json
+```
+
+All results are analytical correlation estimates with stated validity ranges; none is a CFD, FEM or measured value.
+
 ## Supported Topologies
 
 | Topology | Type | Use when |

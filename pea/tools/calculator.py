@@ -396,42 +396,48 @@ def dab_design(
     """
     if p_rated <= 0:
         return {"error": "Rated power must be positive"}
-    if not 0 < phi_deg < 180:
-        return {"error": "Phase shift must be between 0 and 180 degrees"}
+    if not 0 < phi_deg <= 90:
+        return {"error": "Phase shift must be between 0 and 90 degrees for SPS power transfer"}
+
+    # The exact lossless SPS model lives in pea.converters.dab_sps (SI units).
+    # Historical convention of this calculator: ``turns_ratio_n`` is the
+    # voltage-matching ratio N_s/N_p = V2/V1, so that V2 referred to the primary
+    # equals V1 (d = 1). The series inductance is referred to the primary.
+    from pea.converters import dab_sps
 
     f_sw_hz = f_sw_khz * 1000
     phi = math.radians(phi_deg)
-    n = v2 / v1
+    n_sec_per_pri = v2 / v1
+    n_pri_per_sec = v1 / v2
 
-    # Required leakage inductance for rated power at given phase shift
-    # P = V1 * n * V1 * phi * (pi - phi) / (2 * pi^2 * f_sw * L)
-    l_h = v1 * n * v1 * phi * (math.pi - phi) / (2 * math.pi**2 * f_sw_hz * p_rated)
-    l_uH = l_h * 1e6
+    l_h = dab_sps.inductance_for_power(v1, v2, n_pri_per_sec, f_sw_hz, phi, p_rated)
+    op = dab_sps.SpsOperatingPoint(v1=v1, v2=v2, n_ratio=n_pri_per_sec, f_sw=f_sw_hz, l_total=l_h, phi_rad=phi)
+    i_l_pk = dab_sps.current_peak(op)
+    i_l_rms = dab_sps.current_rms(op)
+    sw = dab_sps.switching_currents(op)
 
-    # Peak and RMS inductor current (primary side)
-    i_l_pk = v1 * (math.pi - phi) / (2 * math.pi * f_sw_hz * l_h)
-    i_l_rms = v1 * math.sqrt(
-        phi * (math.pi - phi) * (2 * math.pi - phi) / (3 * math.pi)
-    ) / (2 * math.pi * f_sw_hz * l_h)
+    # Secondary-side currents (N_p/N_s times the primary current)
+    i_sec_pk = i_l_pk * n_pri_per_sec
+    i_sec_rms = i_l_rms * n_pri_per_sec
 
-    # Secondary-side reflected currents
-    i_sec_pk = i_l_pk / n
-    i_sec_rms = i_l_rms / n
-
-    zvs_status = "Achievable" if i_l_pk > 0 else "Check dead-time"
+    zvs_status = ("Achievable" if sw["primary_zvs_current_condition"] and sw["secondary_zvs_current_condition"]
+                  else "Check dead-time")
 
     return {
         "topology": "DAB",
-        "turns_ratio_n": round(n, 4),
-        "leakage_inductance_uH": round(l_uH, 2),
+        "turns_ratio_n": round(n_sec_per_pri, 4),
+        "leakage_inductance_uH": round(l_h * 1e6, 2),
         "phase_shift_deg": phi_deg,
         "transferred_power_W": round(p_rated, 1),
         "I_L_peak_A": round(i_l_pk, 2),
         "I_L_rms_A": round(i_l_rms, 2),
         "I_sec_peak_A": round(i_sec_pk, 2),
         "I_sec_rms_A": round(i_sec_rms, 2),
+        "I_dc_primary_A": round(p_rated / v1, 3),
+        "I_dc_secondary_A": round(p_rated / v2, 3),
         "switching_frequency_kHz": f_sw_khz,
         "ZVS_status": zvs_status,
+        "model": "lossless SPS, ideal transformer, magnetising current neglected (pea.converters.dab_sps)",
         "notes": (
             "Dual Active Bridge: bidirectional isolated converter with ZVS at "
             "moderate to full load. SPS (single phase-shift) modulation assumed. "

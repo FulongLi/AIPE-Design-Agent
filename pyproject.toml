@@ -41,6 +41,7 @@ orchestration = ["jsonschema[format]>=4.25,<5"]
 dev = ["pytest>=7.0", "ruff>=0.1.0"]
 desktop = ["pywebview>=5.0"]
 optimize = ["pymoo>=0.6.1", "numpy>=1.24", "pandas>=2.0"]
+thermal = ["numpy>=1.24", "scipy>=1.10"]  # pea.thermal cooling/heat-sink screening via the sibling HeatSinkOptimisation module
 cad = ["cadquery>=2.4"]
 
 [project.scripts]
