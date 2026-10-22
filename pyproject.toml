@@ -1,52 +1,55 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pea"
-version = "0.1.0"
-description = "AIPE Design Agent - Power engineering design and orchestration"
+name = "aipe-electrical"
+dynamic = ["version"]
+description = "AIPE Electrical Design: analytical converter models with explicit SI units (lossless SPS dual-active-bridge analysis, CCM DC-DC sizing, first-order losses)"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Fulong Li" }]
-keywords = ["power electronics", "AI", "DC-DC", "converter design"]
+keywords = ["power electronics", "dual active bridge", "DAB", "single phase shift", "DC-DC", "converter design", "AIPE"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
 ]
-
-dependencies = [
-    "langchain>=0.1.0",
-    "langchain-core>=0.2.0",
-    "langchain-openai>=0.0.5",
-    "langchain-community>=0.0.20",
-    "chromadb>=0.4.22",
-    "sentence-transformers>=2.2.2",
-    "streamlit>=1.29.0",
-    "python-dotenv>=1.0.0",
-    "pydantic>=2.0.0",
-]
+# Standard library only at runtime.
+dependencies = []
 
 [project.optional-dependencies]
-orchestration = ["jsonschema[format]>=4.25,<5"]
 dev = ["pytest>=7.0", "ruff>=0.1.0"]
-desktop = ["pywebview>=5.0"]
-optimize = ["pymoo>=0.6.1", "numpy>=1.24", "pandas>=2.0"]
-thermal = ["numpy>=1.24", "scipy>=1.10"]  # pea.thermal cooling/heat-sink screening via the sibling HeatSinkOptimisation module
-cad = ["cadquery>=2.4"]
+
+[project.urls]
+Homepage = "https://github.com/FulongLi/AIPE-Electrical-Design"
+Changelog = "https://github.com/FulongLi/AIPE-Electrical-Design/blob/main/CHANGELOG.md"
 
 [project.scripts]
-pea = "pea.cli:run_cli"
-pea-desktop = "pea.desktop:main"
+aipe-electrical = "aipe_electrical.interfaces.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "aipe_electrical.__version__" }
 
 [tool.setuptools.packages.find]
-include = ["pea*"]
+where = ["src"]
+include = ["aipe_electrical*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

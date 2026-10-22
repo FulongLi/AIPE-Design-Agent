@@ -1,0 +1,9 @@
+{
+  "_comment": "AIPE 10 kW DAB benchmark: 800 V -> 400 V, N_p/N_s = 2 (d = 1), 100 kHz, 35 uH TOTAL primary-referred series inductance (external inductor plus leakage). The lossless SPS model solves phi = 22.5 deg for 10 kW; P_max = 22 857 W, I_L rms = 13.6775 A, I_L peak = 14.2857 A. Give exactly one of power_W, phi_deg, phi_rad.",
+  "v1_V": 800,
+  "v2_V": 400,
+  "turns_ratio_np_ns": 2,
+  "f_sw_Hz": 100000,
+  "l_series_total_H": 35e-6,
+  "power_W": 10000
+}
